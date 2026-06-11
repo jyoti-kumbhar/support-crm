@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
 from datetime import datetime
-
+from zoneinfo import ZoneInfo
 from .database import Base
 
 
@@ -18,9 +18,15 @@ class Ticket(Base):
 
     status = Column(String, default="Open")
 
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(
+    DateTime,
+    default=lambda: datetime.now(ZoneInfo("Asia/Kolkata"))
+)
 
+    updated_at = Column(
+    DateTime,
+    default=lambda: datetime.now(ZoneInfo("Asia/Kolkata"))
+    )
 
 class Note(Base):
     __tablename__ = "notes"
