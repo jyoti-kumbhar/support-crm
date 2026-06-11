@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -133,7 +134,9 @@ def update_ticket(
         raise HTTPException(404, "Ticket not found")
 
     ticket.status = update.status
-    ticket.updated_at = datetime.utcnow()
+    ticket.updated_at = datetime.now(
+    ZoneInfo("Asia/Kolkata")
+)
 
     if update.note:
 
