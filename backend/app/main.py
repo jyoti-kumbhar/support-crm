@@ -2,12 +2,18 @@ from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from datetime import datetime
+from pathlib import Path
+
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
 from .database import Base, engine, get_db
 from .models import Ticket, Note
 from .schemas import TicketCreate, TicketUpdate
 
 app = FastAPI()
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -15,15 +21,17 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 Base.metadata.create_all(bind=engine)
 
+# React build location
+BASE_DIR = Path(__file__).resolve().parent.parent
+STATIC_DIR = BASE_DIR / "static"
 
-@app.get("/")
-def root():
-    return {"message": "Customer Support API Running"}
-
-
+# ==========================
 # CREATE TICKET
+# ==========================
+
 @app.post("/api/tickets")
 def create_ticket(ticket: TicketCreate, db: Session = Depends(get_db)):
 
@@ -50,7 +58,10 @@ def create_ticket(ticket: TicketCreate, db: Session = Depends(get_db)):
     }
 
 
+# ==========================
 # LIST + SEARCH + FILTER
+# ==========================
+
 @app.get("/api/tickets")
 def get_tickets(
     status: str = None,
@@ -79,7 +90,10 @@ def get_tickets(
     return tickets
 
 
+# ==========================
 # GET SINGLE TICKET
+# ==========================
+
 @app.get("/api/tickets/{ticket_id}")
 def get_ticket(ticket_id: str, db: Session = Depends(get_db)):
 
@@ -100,7 +114,10 @@ def get_ticket(ticket_id: str, db: Session = Depends(get_db)):
     }
 
 
+# ==========================
 # UPDATE TICKET
+# ==========================
+
 @app.put("/api/tickets/{ticket_id}")
 def update_ticket(
     ticket_id: str,
@@ -133,7 +150,12 @@ def update_ticket(
         "success": True,
         "updated_at": ticket.updated_at
     }
-    
+
+
+# ==========================
+# DELETE TICKET
+# ==========================
+
 @app.delete("/api/tickets/{ticket_id}")
 def delete_ticket(ticket_id: str, db: Session = Depends(get_db)):
 
@@ -159,3 +181,53 @@ def delete_ticket(ticket_id: str, db: Session = Depends(get_db)):
         "success": True,
         "message": "Ticket deleted successfully"
     }
+
+
+# ==========================
+# REACT STATIC FILES
+# ==========================
+
+assets_dir = STATIC_DIR / "assets"
+
+if assets_dir.exists():
+    app.mount(
+        "/assets",
+        StaticFiles(directory=str(assets_dir)),
+        name="assets"
+    )
+
+
+# ==========================
+# REACT FRONTEND
+# ==========================
+
+@app.get("/")
+def serve_frontend():
+
+    index_file = STATIC_DIR / "index.html"
+
+    if index_file.exists():
+        return FileResponse(str(index_file))
+
+    return {
+        "message": "Frontend build not found"
+    }
+
+
+# ==========================
+# REACT ROUTER SUPPORT
+# ==========================
+
+@app.get("/{full_path:path}")
+def react_router(full_path: str):
+
+    # Don't interfere with API routes
+    if full_path.startswith("api"):
+        raise HTTPException(status_code=404)
+
+    index_file = STATIC_DIR / "index.html"
+
+    if index_file.exists():
+        return FileResponse(str(index_file))
+
+    raise HTTPException(status_code=404)
